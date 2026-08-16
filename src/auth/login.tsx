@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../utils/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,18 +20,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/authority/login", {
+      const data = await apiFetch("/api/authority/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
-      localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("role", data.user.status || "authority");
 

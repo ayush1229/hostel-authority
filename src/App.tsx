@@ -8,6 +8,24 @@ import ApprovedPage from "./attendant/ApprovedPage";
 import RejectedPage from "./attendant/RejectedPage";
 import "./App.css";
 
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) {
+  const userStr = localStorage.getItem("user");
+  const role = localStorage.getItem("role")?.toLowerCase();
+
+  if (!userStr || !role) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Handle variations in role naming from the backend
+  const normalizedRole = role === "chief warden" ? "chief-warden" : role === "attendent" ? "attendant" : role;
+
+  if (!allowedRoles.includes(normalizedRole)) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <Router>
@@ -16,13 +34,25 @@ function App() {
         <Route path="/login" element={<Login />} />
         
         {/* CHIEF WARDEN */}
-        <Route path="/chief-warden" element={<ChiefWarden />} />
+        <Route path="/chief-warden" element={
+          <ProtectedRoute allowedRoles={["chief-warden"]}>
+            <ChiefWarden />
+          </ProtectedRoute>
+        } />
         
         {/* WARDEN */}
-        <Route path="/warden" element={<Warden />} />
+        <Route path="/warden" element={
+          <ProtectedRoute allowedRoles={["warden"]}>
+            <Warden />
+          </ProtectedRoute>
+        } />
         
         {/* ATTENDANT (Nested Routes) */}
-        <Route path="/attendant" element={<AdminLayout />}>
+        <Route path="/attendant" element={
+          <ProtectedRoute allowedRoles={["attendant"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }>
           {/* Default to pending page */}
           <Route index element={<PendingPage />} />
           <Route path="pending" element={<PendingPage />} />
