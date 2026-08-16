@@ -357,7 +357,7 @@ export default function Warden() {
     }
   }
 
-  // GET /api/students/outpass-cutoff — populates the deadline field when the
+  // GET /api/management/outpass-cutoff — populates the deadline field when the
   // Outpass Settings modal is opened. The backend identifies the Warden's hostel
   // from the JWT, so no hostel info is sent or needed here.
   async function fetchOutpassSettings() {
@@ -365,7 +365,7 @@ export default function Warden() {
       setOutpassSettingsLoading(true);
       setOutpassSettingsError("");
 
-      const res: any = await apiFetch("/api/students/outpass-cutoff");
+      const res: any = await apiFetch("/api/management/outpass-cutoff");
 
       // Backend returns HH:MM:SS (e.g. "17:00:00") — strip the seconds for the
       // HTML time input, which expects HH:MM.
@@ -525,7 +525,7 @@ export default function Warden() {
 
       // Only the cutoff time is sent — the backend resolves the Warden's hostel
       // from the JWT (req.user.id), so no hostel ID/name is included here.
-      const res: any = await apiFetch("/api/students/outpass-cutoff", {
+      const res: any = await apiFetch("/api/management/outpass-cutoff", {
         method: "PATCH",
         body: JSON.stringify({ cutoffTime: outpassCutoffTime }),
       });
@@ -1250,7 +1250,7 @@ export default function Warden() {
     });
   }
 
-  const handleTabSwitch = (tab: "outpasses" | "complaints" | "lateLogs") => {
+  const handleTabSwitch = (tab: "outpasses" | "complaints" | "lateLogs"  | "allotment") => {
     setActiveTab(tab);
     setPage(1);
   };
