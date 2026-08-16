@@ -2526,86 +2526,57 @@ function ChiefWarden() {
                     </div>
                   </div>
 
-                  {/* PREVIOUS OUTPASSES */}
+                  {/* SPREADSHEET VIEW FOR OUTPASSES */}
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                      Previous Outpasses ({historyResult.outpasses.length})
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                      Outpass History ({historyResult.outpasses.length})
                     </h3>
                     {historyResult.outpasses.length === 0 ? (
                       <p className="text-xs text-gray-400 italic">No previous outpasses.</p>
                     ) : (
-                      <div className="space-y-1.5">
-                        {historyResult.outpasses.map((p) => (
-                          <div
-                            key={p.id}
-                            className="flex justify-between items-center bg-gray-50 rounded-xl px-3 py-2"
-                          >
-                            <span className="text-xs text-gray-700">
-                              {p.place_of_visit || "-"} • {p.outpass_type}
-                            </span>
-                            <StatusPill pass={p} />
-                          </div>
-                        ))}
+                      <div className="overflow-x-auto border border-gray-200/80 rounded-xl shadow-sm">
+                        <table className="w-full text-left text-xs whitespace-nowrap">
+                          <thead className="bg-gray-50 border-b border-gray-200/80 text-gray-500 font-bold uppercase tracking-wider">
+                            <tr>
+                              <th className="px-4 py-3">Type</th>
+                              <th className="px-4 py-3">Destination & Purpose</th>
+                              <th className="px-4 py-3">Departure (Out)</th>
+                              <th className="px-4 py-3">Arrival (In)</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3">Campus</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 bg-white">
+                            {historyResult.outpasses.map((p) => (
+                              <tr key={p.id} className="hover:bg-gray-50/50 transition">
+                                <td className="px-4 py-3 font-semibold text-gray-700">
+                                  {p.outpass_type}
+                                  {p.is_emergency && <span className="ml-1 text-red-500">⚡</span>}
+                                </td>
+                                <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate" title={`${p.place_of_visit || "Local"} - ${p.purpose || ""}`}>
+                                  <span className="font-semibold">{p.place_of_visit || "Local"}</span>
+                                  {p.purpose && <span className="text-gray-400 ml-1">- {p.purpose}</span>}
+                                </td>
+                                <td className="px-4 py-3 text-gray-600">
+                                  {safeDate(p.departure_datetime)}
+                                </td>
+                                <td className="px-4 py-3 text-gray-600">
+                                  {safeDate(p.arrival_datetime)}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <StatusPill pass={p} />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.std_status === 'Out' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                    {p.std_status || "In"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
-                  </div>
-
-                  {/* PREVIOUS COMPLAINTS (from history endpoint, not local filtering) */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                      Previous Complaints ({historyResult.complaints.length})
-                    </h3>
-                    {historyResult.complaints.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No previous complaints.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {historyResult.complaints.map((c) => (
-                          <div key={c.id} className="bg-gray-50 rounded-xl px-3 py-2">
-                            <p className="text-xs font-semibold text-gray-700">{c.title || "Complaint"}</p>
-                            <p className="text-[11px] text-gray-500 line-clamp-1">{c.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* PREVIOUS VISIT LOGS */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                      Previous Visit Logs ({historyResult.visit_logs.length})
-                    </h3>
-                    {historyResult.visit_logs.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No previous visit logs.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {historyResult.visit_logs.map((l) => (
-                          <div
-                            key={l.id}
-                            className="flex justify-between items-center bg-gray-50 rounded-xl px-3 py-2"
-                          >
-                            <span className="text-xs text-gray-700">{l.place_of_visit || "-"}</span>
-                            <span className="text-[11px] text-gray-500">
-                              {safeDate(l.arrival_datetime)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* REMARKS - requires backend support */}
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                      Remarks History
-                    </h3>
-                    <p className="text-[11px] text-gray-400 italic">
-                      Not included in{" "}
-                      <code className="bg-gray-100 px-1 rounded">
-                        GET /api/students/:id/history
-                      </code>
-                      . Open an individual outpass's Remarks panel to view its
-                      remarks, or ask backend to add remarks to this response.
-                    </p>
                   </div>
                 </>
               )}
