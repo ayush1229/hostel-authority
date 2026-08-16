@@ -4,6 +4,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import OutpassModal from "./OutpassModal";
 import { apiFetch } from "../utils/api";
@@ -19,6 +20,40 @@ import {
   Toast,
 } from "./outpass";
 
+const PENDING_QUERY_KEY = ["outpasses", "pending"];
+
+// ===========================
+// Fetcher — normalizes the API's nested shape:
+// { statusCode, data: { data: [...], pagination: {...} }, message, success }
+// ===========================
+async function fetchPendingOutpasses() {
+  const result = await apiFetch(`/api/students/hostel-status`, {
+    method: "POST",
+    body: JSON.stringify({ outp_status: "Pending" }),
+  });
+
+  const items = Array.isArray(result)
+    ? result
+    : Array.isArray(result?.data)
+    ? result.data
+    : Array.isArray(result?.data?.data)
+    ? result.data.data
+    : [];
+
+  const apiPagination = result?.data?.pagination;
+
+  return {
+    items,
+    pagination: {
+      page: apiPagination?.page ?? 1,
+      total: apiPagination?.total ?? items.length,
+      totalPages: apiPagination?.totalPages ?? 1,
+      hasNextPage: apiPagination?.hasNextPage ?? false,
+      hasPrevPage: apiPagination?.hasPrevPage ?? false,
+    },
+  };
+}
+
 export default function PendingPage() {
   // ===========================
   // State
@@ -30,11 +65,6 @@ export default function PendingPage() {
   const [filter, setFilter] = useState("All");
   const [sortBy, setSortBy] = useState("latest");
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const [data, setData] = useState([]);
-
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -44,7 +74,6 @@ export default function PendingPage() {
     action: "",
     ids: [],
   });
-  const [remarkLoading, setRemarkLoading] = useState(false);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -52,63 +81,44 @@ export default function PendingPage() {
   // Select all checkbox
   const selectAllRef = useRef(null);
 
-  // Pagination
+  // Pagination (server only returns one page today; kept for UI wiring)
   const [page, setPage] = useState(1);
-
   const limit = 10;
 
-  const [pagination, setPagination] = useState({
+  const queryClient = useQueryClient();
+
+  // ===========================
+  // Query — cache is persisted to localStorage (see queryClient.js).
+  // On mount: cached data (if any) renders instantly, then this
+  // refetches in the background and swaps in fresh data.
+  // ===========================
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: PENDING_QUERY_KEY,
+    queryFn: fetchPendingOutpasses,
+  });
+
+  const items = data?.items ?? [];
+  const pagination = data?.pagination ?? {
     page: 1,
     total: 0,
     totalPages: 1,
     hasNextPage: false,
     hasPrevPage: false,
-  });
+  };
+
+  // Clear selection whenever the page changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page]);
 
   // ===========================
-  // Fetch Pending Requests
-  // ===========================
-
-  async function fetchPending(currentPage = page) {
-    try {
-      setLoading(true);
-      setError("");
-
-      const result = await apiFetch(
-        `/api/students/hostel-status`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            outp_status: "Pending",
-          }),
-        }
-      );
-
-      const items = Array.isArray(result) ? result : (result?.data || []);
-      setData(items);
-
-      setPagination({
-        page: 1,
-        total: items.length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false,
-      });
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err.message || "Unable to load pending outpasses."
-      );
-
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // ===========================
-  // View (fetch full outpass details)
+  // View (fetch full outpass details) — one-off, not cached
   // ===========================
 
   async function handleView(outpass) {
@@ -131,23 +141,11 @@ export default function PendingPage() {
   }
 
   // ===========================
-  // Effects
-  // ===========================
-
-  useEffect(() => {
-    fetchPending(page);
-
-    // Clear selected rows when page changes
-    setSelectedIds([]);
-  }, [page]);
-
-  // ===========================
   // Search + Filter + Sort
-  // (Hoisted above early returns — must run on every render)
   // ===========================
 
   const processed = useMemo(() => {
-    let arr = [...data];
+    let arr = Array.isArray(items) ? [...items] : [];
 
     const q = search.toLowerCase();
 
@@ -163,25 +161,21 @@ export default function PendingPage() {
     );
 
     if (filter !== "All") {
-      arr = arr.filter(
-        (o) => o.outpass_type === filter
-      );
+      arr = arr.filter((o) => o.outpass_type === filter);
     }
 
     arr.sort((a, b) =>
       sortBy === "latest"
-        ? new Date(b.created_at) -
-          new Date(a.created_at)
+        ? new Date(b.created_at) - new Date(a.created_at)
         : new Date(a.departure_datetime) -
           new Date(b.departure_datetime)
     );
 
     return arr;
-  }, [data, search, filter, sortBy]);
+  }, [items, search, filter, sortBy]);
 
   // ===========================
   // Select All Checkbox
-  // (Hoisted above early returns — must run on every render)
   // ===========================
 
   useEffect(() => {
@@ -196,11 +190,7 @@ export default function PendingPage() {
   }, [processed, selectedIds]);
 
   const toggleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedIds(processed.map((o) => o.id));
-    } else {
-      setSelectedIds([]);
-    }
+    setSelectedIds(checked ? processed.map((o) => o.id) : []);
   };
 
   const toggleRow = (id) => {
@@ -212,61 +202,72 @@ export default function PendingPage() {
   };
 
   // ===========================
-  // Single Approve (opens remark dialog)
+  // Single / Bulk Approve / Reject (open remark dialog)
   // ===========================
 
   function approve(id) {
-    setRemarkDialog({
-      open: true,
-      action: "approve",
-      ids: [id],
-    });
+    setRemarkDialog({ open: true, action: "approve", ids: [id] });
   }
-
-  // ===========================
-  // Single Reject (opens remark dialog)
-  // ===========================
 
   function reject(id) {
-    setRemarkDialog({
-      open: true,
-      action: "reject",
-      ids: [id],
-    });
+    setRemarkDialog({ open: true, action: "reject", ids: [id] });
   }
-
-  // ===========================
-  // Bulk Approve / Reject (open remark dialog)
-  // ===========================
 
   function bulkApprove() {
     if (selectedIds.length === 0) return;
-
-    setRemarkDialog({
-      open: true,
-      action: "approve",
-      ids: selectedIds,
-    });
+    setRemarkDialog({ open: true, action: "approve", ids: selectedIds });
   }
 
   function bulkReject() {
     if (selectedIds.length === 0) return;
-
-    setRemarkDialog({
-      open: true,
-      action: "reject",
-      ids: selectedIds,
-    });
+    setRemarkDialog({ open: true, action: "reject", ids: selectedIds });
   }
 
   // ===========================
-  // Remark Dialog Submit
-  // Handles both single (ids.length === 1) and bulk (ids.length > 1)
+  // Remark Dialog Submit — mutation
+  // Handles both single (ids.length === 1) and bulk (ids.length > 1).
+  // On success, invalidates the pending-outpasses query so it refetches
+  // and the persisted cache gets updated with fresh data.
   // ===========================
 
-  async function submitRemark(remark) {
-    const { action, ids } = remarkDialog;
+  const remarkMutation = useMutation({
+    mutationFn: async ({ action, ids, remark }) => {
+      if (ids.length === 1) {
+        return apiFetch(`/api/outpasses/${action}/${ids[0]}`, {
+          method: "PATCH",
+          body: JSON.stringify({ remark }),
+        });
+      }
+      return apiFetch("/api/outpasses/bulk-action", {
+        method: "PATCH",
+        body: JSON.stringify({ ids, action, remark }),
+      });
+    },
+    onSuccess: (_result, variables) => {
+      const { action, ids } = variables;
 
+      setToast({
+        type: "success",
+        message: `${ids.length} outpass${
+          ids.length > 1 ? "es" : ""
+        } ${action === "approve" ? "approved" : "rejected"} successfully.`,
+      });
+
+      setRemarkDialog({ open: false, action: "", ids: [] });
+      setSelectedIds([]);
+
+      queryClient.invalidateQueries({ queryKey: PENDING_QUERY_KEY });
+    },
+    onError: (err) => {
+      setToast({
+        type: "error",
+        message: err.message || "Action failed.",
+      });
+    },
+  });
+
+  function submitRemark(remark) {
+    const { action, ids } = remarkDialog;
     if (ids.length === 0) return;
 
     if (action === "reject" && !remark?.trim()) {
@@ -277,64 +278,19 @@ export default function PendingPage() {
       return;
     }
 
-    try {
-      setRemarkLoading(true);
-
-      if (ids.length === 1) {
-        await apiFetch(
-          `/api/outpasses/${action}/${ids[0]}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ remark }),
-          }
-        );
-      } else {
-        await apiFetch(
-          "/api/outpasses/bulk-action",
-          {
-            method: "PATCH",
-            body: JSON.stringify({
-              ids: ids,
-              action,
-              remark,
-            }),
-          }
-        );
-      }
-
-      setToast({
-        type: "success",
-        message: `${ids.length} outpass${
-          ids.length > 1 ? "es" : ""
-        } ${
-          action === "approve" ? "approved" : "rejected"
-        } successfully.`,
-      });
-
-      setRemarkDialog({ open: false, action: "", ids: [] });
-      setSelectedIds([]);
-
-      fetchPending(page);
-    } catch (err) {
-      setToast({
-        type: "error",
-        message: err.message || "Action failed.",
-      });
-    } finally {
-      setRemarkLoading(false);
-    }
+    remarkMutation.mutate({ action, ids, remark });
   }
 
   const allSelected =
-    processed.length > 0 &&
-    processed.length === selectedIds.length;
+    processed.length > 0 && processed.length === selectedIds.length;
 
   // ===========================
-  // Loading
-  // (Early returns now come AFTER every hook call)
+  // Loading (only shown when there's no cached data to paint yet —
+  // if a persisted cache exists, isLoading is false and stale data
+  // renders immediately while it refetches in the background)
   // ===========================
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
         <div className="text-lg text-gray-500">
@@ -348,11 +304,11 @@ export default function PendingPage() {
   // Error
   // ===========================
 
-  if (error) {
+  if (isError) {
     return (
       <div className="p-4 sm:p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
-          {error}
+          {error?.message || "Unable to load pending outpasses."}
         </div>
       </div>
     );
@@ -369,7 +325,7 @@ export default function PendingPage() {
         subtitle="Review, approve or reject hostel outpass requests"
         total={pagination.total}
         buttonLabel="Pending"
-        onRefresh={() => fetchPending(page)}
+        onRefresh={() => refetch()}
       />
 
       <Stats
@@ -392,7 +348,7 @@ export default function PendingPage() {
 
       <BulkToolbar
         selectedCount={selectedIds.length}
-        loading={remarkLoading}
+        loading={remarkMutation.isPending}
         onApprove={bulkApprove}
         onReject={bulkReject}
         onClear={() => setSelectedIds([])}
@@ -430,7 +386,7 @@ export default function PendingPage() {
         open={remarkDialog.open}
         action={remarkDialog.action}
         count={remarkDialog.ids.length}
-        loading={remarkLoading}
+        loading={remarkMutation.isPending}
         requireRemark={remarkDialog.action === "reject"}
         onCancel={() =>
           setRemarkDialog({ open: false, action: "", ids: [] })
@@ -438,10 +394,7 @@ export default function PendingPage() {
         onSubmit={submitRemark}
       />
 
-      <Toast
-        toast={toast}
-        onClose={() => setToast(null)}
-      />
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
