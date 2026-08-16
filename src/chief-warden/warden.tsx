@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../utils/api';
 
 // 1. Define the TypeScript Interface
 interface OutpassData {
@@ -53,15 +54,7 @@ function Warden() {
     setLoadingHistory(true);
     setIsModalOpen(true);
     try {
-      // NOTE: Using token if needed, or directly fetch if auth is optional (as in outpasses)
-      const token = localStorage.getItem("token");
-      const headers: any = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const res = await fetch(`http://localhost:5000/api/students/${studentId}/history`, {
-        headers,
-      });
-      const data = await res.json();
+      const data = await apiFetch(`/api/students/${studentId}/history`);
       if (data.success) {
         setStudentHistory(data.data);
       } else {
@@ -77,16 +70,11 @@ function Warden() {
     }
   };
 
-  // --- Fetch All Outpasses WITHOUT TOKEN ---
+  // --- Fetch All Outpasses ---
   useEffect(() => {
     const fetchOutpasses = async () => {
       try {
-        // No headers needed since we removed 'auth' from the backend
-        const response = await fetch('http://localhost:5000/outpass/monitor');
-        
-        if (!response.ok) throw new Error('Failed to fetch outpasses');
-        
-        const data = await response.json();
+        const data = await apiFetch('/api/outpasses/monitor');
         setOutpasses(data.outpasses);
       } catch (error) {
         console.error("Error fetching outpasses:", error);
@@ -96,7 +84,6 @@ function Warden() {
       }
     };
 
-    // Call it immediately, skipping the token check
     fetchOutpasses();
   }, []);
 
