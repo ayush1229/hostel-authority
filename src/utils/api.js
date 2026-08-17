@@ -6,44 +6,37 @@ export async function apiFetch(
   options = {}
 ) {
 
-  const token =
-    localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
 
-  const role =
-    localStorage.getItem("role");
-
-  const response =
-    await fetch(
-      `${BASE_URL}${endpoint}`,
-      {
-        ...options,
-        credentials: "include",
-        headers: {
-          "Content-Type":
-            "application/json",
-          role: role || "",
-          ...(options.headers || {}),
-        },
-      }
-    );
+  const response = await fetch(
+    `${BASE_URL}${endpoint}`,
+    {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        role: role || "",
+        ...(token ? { Authorization: `Bearer ${token}`, token } : {}),
+        ...(options.headers || {}),
+      },
+    }
+  );
 
   /* ================= AUTO LOGOUT ================= */
 
-  // Only treat 401/403 as a session expiry if we're NOT on an auth endpoint.
-  // A 401 on /api/auth/login just means wrong credentials — not an expired session.
-  const isAuthEndpoint = endpoint.startsWith("/api/auth/");
+  const isAuthEndpoint = 
+    endpoint.startsWith("/api/auth/") || 
+    endpoint.startsWith("/api/authority/login") ||
+    endpoint.startsWith("/api/authority/refresh");
 
   if (
     !isAuthEndpoint &&
     (response.status === 401 || response.status === 403)
   ) {
     localStorage.clear();
-    window.location.href =
-      "/login";
-
-    throw new Error(
-      "Unauthorized"
-    );
+    window.location.href = "/login";
+    throw new Error("Unauthorized");
   }
 
   const text =

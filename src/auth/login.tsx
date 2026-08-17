@@ -25,16 +25,21 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
+      if (data.token || data.accessToken) {
+        localStorage.setItem("token", data.token || data.accessToken);
+      }
       localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("role", data.user.status || "authority");
+      
+      const rawRole = data.user.role || data.user.status || "authority";
+      const normalizedRole = rawRole.toLowerCase().replace(/[\s_]+/g, "-");
+      localStorage.setItem("role", normalizedRole);
 
       // Route based on status
-      const status = data.user.status?.toLowerCase();
-      if (status === "chief warden" || status === "chief-warden") {
+      if (normalizedRole === "chief-warden") {
         navigate("/chief-warden");
-      } else if (status === "warden") {
+      } else if (normalizedRole === "warden") {
         navigate("/warden");
-      } else if (status === "attendant" || status === "attendent") {
+      } else if (normalizedRole === "attendant" || normalizedRole === "attendent") {
         navigate("/attendant");
       } else {
         navigate("/");
