@@ -15,16 +15,11 @@ import {
   Download,
   Printer,
   Check,
-  DoorOpen
+  DoorOpen,
+  Menu
 } from "lucide-react";
 
 /* ================= TYPES ================= */
-
-interface Hostel {
-  id?: string;
-  hostel_name?: string;
-  name?: string;
-}
 
 interface Remark {
   id: string;
@@ -224,19 +219,19 @@ function StatCard({
   accent: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+    <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200/80 shadow-xs sm:shadow-sm p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-3 transition-all duration-300 hover:shadow-md shrink-0 min-w-[130px] sm:min-w-0">
       <div
-        className="w-11 h-11 rounded-xl flex items-center justify-center text-lg shrink-0"
+        className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-sm sm:text-lg shrink-0"
         style={{ backgroundColor: `${accent}1a`, color: accent }}
       >
-        <span>{icon}</span>
+        <span className="scale-75 sm:scale-100">{icon}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 truncate">
+        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gray-400 truncate">
           {label}
         </p>
         <p
-          className="text-2xl font-extrabold tabular-nums transition-all duration-500"
+          className="text-base sm:text-2xl font-extrabold tabular-nums transition-all duration-500 leading-tight mt-0.5 sm:mt-0"
           style={{ color: accent }}
         >
           {value}
@@ -330,11 +325,11 @@ function TableSkeleton({ rows = 6, cols = 7 }: { rows?: number; cols?: number })
 
 function StatCardSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4 flex items-center gap-3">
-      <div className="w-11 h-11 rounded-xl bg-gray-100 animate-pulse shrink-0" />
-      <div className="flex-1 space-y-2">
-        <div className="h-2.5 w-16 rounded-full bg-gray-100 animate-pulse" />
-        <div className="h-4 w-10 rounded-full bg-gray-100 animate-pulse" />
+    <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200/80 shadow-xs sm:shadow-sm p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-3 shrink-0 min-w-[130px] sm:min-w-0">
+      <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-gray-100 animate-pulse shrink-0" />
+      <div className="flex-1 space-y-1.5 min-w-0">
+        <div className="h-2 w-12 sm:w-16 rounded-full bg-gray-100 animate-pulse" />
+        <div className="h-3.5 sm:h-4 w-8 sm:w-10 rounded-full bg-gray-100 animate-pulse" />
       </div>
     </div>
   );
@@ -435,8 +430,8 @@ function ChiefWarden() {
   const [escalatedComplaints, setEscalatedComplaints] = useState<Complaint[]>([]);
   const [lateLogs, setLateLogs] = useState<LateLog[]>([]);
   const [activeTab, setActiveTab] = useState<"outpasses" | "complaints" | "escalated" | "lateLogs" | "allotment" | "devices">("outpasses");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [hostels, setHostels] = useState<Hostel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -490,7 +485,6 @@ function ChiefWarden() {
     fetchDashboard();
     fetchComplaints();
     fetchEscalatedComplaints();
-    fetchHostels();
     fetchLateLogs();
   }, []);
 
@@ -570,26 +564,7 @@ function ChiefWarden() {
     }
   }
 
-  /* ================= FETCH HOSTELS ================= */
 
-  async function fetchHostels() {
-    try {
-      const response: any = await apiFetch("/api/hostels");
-
-      const list = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.hostels)
-        ? response.hostels
-        : [];
-
-      setHostels(list);
-    } catch (err) {
-      console.error("HOSTEL FETCH ERROR:", err);
-      setHostels([]);
-    }
-  }
 
   /* ================= FETCH LATE LOGS (GET /api/outpasses/late-returns) ================= */
 
@@ -1312,7 +1287,7 @@ function ChiefWarden() {
     return filteredLateLogs.slice(start, start + limit);
   }, [filteredLateLogs, page, limit]);
 
-  const handleTabSwitch = (tab: "outpasses" | "complaints" | "escalated" | "lateLogs") => {
+  const handleTabSwitch = (tab: any) => {
     setActiveTab(tab);
     setPage(1);
   };
@@ -1349,8 +1324,8 @@ function ChiefWarden() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto p-8 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="max-w-7xl mx-auto p-4 sm:p-8 space-y-6">
+          <div className="flex overflow-x-auto gap-2.5 pb-1 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 sm:gap-4 scrollbar-none">
             {Array.from({ length: 7 }).map((_, i) => (
               <StatCardSkeleton key={i} />
             ))}
@@ -1369,13 +1344,26 @@ function ChiefWarden() {
 
   return (
     <div className="min-h-screen flex bg-[#f9fafb] font-sans text-gray-800">
-      <ChiefWardenSidebar activeTab={activeTab} setActiveTab={handleTabSwitch} logout={logout} />
+      <ChiefWardenSidebar 
+        activeTab={activeTab} 
+        setActiveTab={handleTabSwitch} 
+        logout={logout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* ================= TOP HEADER ================= */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex flex-wrap justify-between items-center gap-3 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-[#5b0e0e] capitalize">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 shadow-sm flex flex-wrap justify-between items-center gap-3 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -ml-1 rounded-xl text-gray-700 hover:bg-gray-100 md:hidden cursor-pointer transition"
+              title="Open Navigation"
+            >
+              <Menu size={22} />
+            </button>
+            <h1 className="text-lg sm:text-xl font-bold text-[#5b0e0e] capitalize">
               {activeTab === "lateLogs" ? "Late Returns" : activeTab} Dashboard
             </h1>
           </div>
@@ -1418,15 +1406,15 @@ function ChiefWarden() {
         {activeTab !== "allotment" && activeTab !== "devices" && (
           <>
             {/* ================= STATISTICS CARDS ================= */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <StatCard label="Total Outpasses" value={stats.total} icon={<FileText size={24} />} accent="#6d0f16" />
-          <StatCard label="Pending" value={stats.pending} icon={<Clock size={24} />} accent="#d97706" />
-          <StatCard label="Approved" value={stats.approved} icon={<Check size={24} />} accent="#16a34a" />
-          <StatCard label="Outside Campus" value={stats.outside} icon={<DoorOpen size={24} />} accent="#ea580c" />
-          <StatCard label="Late Returns" value={stats.lateReturns} icon={<Clock size={24} />} accent="#dc2626" />
-          <StatCard label="Complaints" value={stats.complaintsCount} icon={<AlertTriangle size={24} />} accent="#2563eb" />
-          <StatCard label="Emergency" value={stats.emergency} icon={<AlertTriangle size={24} />} accent="#b91c1c" />
-        </div>
+            <div className="flex overflow-x-auto gap-2.5 pb-1 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 sm:gap-4 scrollbar-none">
+              <StatCard label="Total Outpasses" value={stats.total} icon={<FileText size={24} />} accent="#6d0f16" />
+              <StatCard label="Pending" value={stats.pending} icon={<Clock size={24} />} accent="#d97706" />
+              <StatCard label="Approved" value={stats.approved} icon={<Check size={24} />} accent="#16a34a" />
+              <StatCard label="Outside Campus" value={stats.outside} icon={<DoorOpen size={24} />} accent="#ea580c" />
+              <StatCard label="Late Returns" value={stats.lateReturns} icon={<Clock size={24} />} accent="#dc2626" />
+              <StatCard label="Complaints" value={stats.complaintsCount} icon={<AlertTriangle size={24} />} accent="#2563eb" />
+              <StatCard label="Emergency" value={stats.emergency} icon={<AlertTriangle size={24} />} accent="#b91c1c" />
+            </div>
 
         {/* ================= FILTERS & TIME RANGE ================= */}
 

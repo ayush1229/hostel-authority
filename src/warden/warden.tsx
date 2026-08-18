@@ -7,7 +7,8 @@ import WardenSidebar from "./WardenSidebar";
 import AttendantsAllotment from "./AttendantsAllotment";
 import { 
   Download,
-  Search
+  Search,
+  Menu
 } from "lucide-react";
 
 /* ================= TYPES ================= */
@@ -156,6 +157,7 @@ export default function Warden() {
   const [activeTab, setActiveTab] = useState<
     "outpasses" | "complaints" | "lateLogs" | "allotment"
   >("outpasses");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1286,14 +1288,22 @@ export default function Warden() {
         logout={logout}
         onRoomAllocation={() => navigate('/allocation/admin')}
         onOutpassSettings={() => setIsOutpassSettingsModalOpen(true)}
-        onAppointAttendant={() => setIsAppointModalOpen(true)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* ================= TOP HEADER ================= */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex flex-wrap justify-between items-center gap-3 sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-[#5b0e0e] capitalize">
+        <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 shadow-sm flex flex-wrap justify-between items-center gap-3 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -ml-1 rounded-xl text-gray-700 hover:bg-gray-100 md:hidden cursor-pointer transition"
+              title="Open Navigation"
+            >
+              <Menu size={22} />
+            </button>
+            <h1 className="text-lg sm:text-xl font-bold text-[#5b0e0e] capitalize">
               {activeTab === "lateLogs" ? "Late Returns" : activeTab}
             </h1>
           </div>

@@ -64,22 +64,18 @@ export default function HistoryTable({
               </td>
 
               <td className="px-5 py-4 text-sm">
-                {new Date(
-                  o.departure_datetime
-                ).toLocaleString("en-IN")}
+                {(() => { const d = new Date(o.departure_datetime); return isNaN(d.getTime()) ? "-" : d.toLocaleString("en-IN", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }); })()}
               </td>
 
               <td className="px-5 py-4 text-sm text-gray-500">
-                {new Date(
-                  o.updated_at
-                ).toLocaleString("en-IN")}
+                {(() => { const d = new Date(o.updated_at); return isNaN(d.getTime()) ? "-" : d.toLocaleString("en-IN", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" }); })()}
               </td>
 
               <td className="px-5 py-4">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}
                 >
-                  {o.outp_status}
+                  {o.outp_status || o.status}
                 </span>
               </td>
 
