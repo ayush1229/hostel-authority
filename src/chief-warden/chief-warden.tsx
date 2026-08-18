@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api";
-import { NITH_HOSTELS } from "../utils/hostels";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import ChiefWardenSidebar from "./ChiefWardenSidebar";
@@ -19,12 +19,6 @@ import {
 } from "lucide-react";
 
 /* ================= TYPES ================= */
-
-interface Hostel {
-  id?: string;
-  hostel_name?: string;
-  name?: string;
-}
 
 interface Remark {
   id: string;
@@ -436,7 +430,21 @@ function ChiefWarden() {
   const [lateLogs, setLateLogs] = useState<LateLog[]>([]);
   const [activeTab, setActiveTab] = useState<"outpasses" | "complaints" | "escalated" | "lateLogs" | "allotment" | "devices">("outpasses");
 
-  const [hostels, setHostels] = useState<Hostel[]>([]);
+  const { data: hostels = [] } = useQuery({
+    queryKey: ["hostelsList"],
+    queryFn: async () => {
+      const response: any = await apiFetch("/api/hostels");
+      return Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.hostels)
+        ? response.hostels
+        : [];
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -490,7 +498,6 @@ function ChiefWarden() {
     fetchDashboard();
     fetchComplaints();
     fetchEscalatedComplaints();
-    fetchHostels();
     fetchLateLogs();
   }, []);
 
@@ -567,27 +574,6 @@ function ChiefWarden() {
     } catch (err) {
       console.error("COMPLAINT FETCH ERROR:", err);
       setComplaints([]);
-    }
-  }
-
-  /* ================= FETCH HOSTELS ================= */
-
-  async function fetchHostels() {
-    try {
-      const response: any = await apiFetch("/api/hostels");
-
-      const list = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.hostels)
-        ? response.hostels
-        : [];
-
-      setHostels(list);
-    } catch (err) {
-      console.error("HOSTEL FETCH ERROR:", err);
-      setHostels([]);
     }
   }
 
@@ -1312,8 +1298,8 @@ function ChiefWarden() {
     return filteredLateLogs.slice(start, start + limit);
   }, [filteredLateLogs, page, limit]);
 
-  const handleTabSwitch = (tab: "outpasses" | "complaints" | "escalated" | "lateLogs") => {
-    setActiveTab(tab);
+  const handleTabSwitch = (tab: string) => {
+    setActiveTab(tab as any);
     setPage(1);
   };
 
@@ -1484,10 +1470,11 @@ function ChiefWarden() {
               className="bg-gray-50/50 border border-gray-200 rounded-2xl px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-[#6d0f16] transition cursor-pointer"
             >
               <option value="All">All Hostels</option>
-              {NITH_HOSTELS.map((hostel) => {
+              {hostels.map((hostel: any, index: number) => {
+                const displayName = hostel.name || hostel.hostel_name;
                 return (
-                  <option key={hostel.id} value={hostel.name}>
-                    {hostel.name}
+                  <option key={hostel.id || index} value={displayName}>
+                    {displayName}
                   </option>
                 );
               })}
