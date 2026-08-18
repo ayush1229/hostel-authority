@@ -1,6 +1,16 @@
 import React from "react";
 import RowActions from "./RowActions";
 
+function safeDate(val) {
+  if (!val) return "-";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
 export default function Table({
   data = [],
   status,
@@ -109,15 +119,11 @@ export default function Table({
               </td>
 
               <td className="px-5 py-4 text-sm">
-                {new Date(
-                  o.departure_datetime
-                ).toLocaleString("en-IN")}
+                {safeDate(o.departure_datetime)}
               </td>
 
               <td className="px-5 py-4 text-sm text-gray-500">
-                {new Date(
-                  o.updated_at
-                ).toLocaleString("en-IN")}
+                {safeDate(o.updated_at)}
               </td>
 
               <td className="px-5 py-4 text-center">

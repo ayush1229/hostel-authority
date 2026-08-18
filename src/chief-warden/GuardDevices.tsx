@@ -17,6 +17,9 @@ interface GuardDevice {
   device_name: string;
   phone: string;
   gate: string;
+  guard_type?: "MAIN_GATE" | "HOSTEL_GATE";
+  hostel_id?: string;
+  hostel_name?: string;
   activation_code: string;
   fingerprint_hash?: string;
   device_info?: DeviceInfo | string;
@@ -36,8 +39,14 @@ interface DeviceLog {
   created_at: string;
 }
 
+interface HostelOption {
+  id: string;
+  name: string;
+}
+
 export default function GuardDevices() {
   const [devices, setDevices] = useState<GuardDevice[]>([]);
+  const [hostels, setHostels] = useState<HostelOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -48,6 +57,8 @@ export default function GuardDevices() {
   const [adding, setAdding] = useState(false);
   const [phone, setPhone] = useState("");
   const [deviceName, setDeviceName] = useState("Main Gate Terminal");
+  const [guardType, setGuardType] = useState<"MAIN_GATE" | "HOSTEL_GATE">("MAIN_GATE");
+  const [selectedHostelId, setSelectedHostelId] = useState("");
   const [gate, setGate] = useState("Main Gate");
   const [createdCode, setCreatedCode] = useState<{ code: string; phone: string } | null>(null);
 
@@ -59,7 +70,22 @@ export default function GuardDevices() {
 
   useEffect(() => {
     fetchDevices();
+    fetchHostels();
   }, []);
+
+  async function fetchHostels() {
+    try {
+      const res = await apiFetch("/api/hostels");
+      if (res.success && Array.isArray(res.hostels)) {
+        setHostels(res.hostels);
+        if (res.hostels.length > 0 && !selectedHostelId) {
+          setSelectedHostelId(res.hostels[0].id);
+        }
+      }
+    } catch {
+      // Fallback empty list
+    }
+  }
 
   async function fetchDevices() {
     try {
@@ -79,18 +105,26 @@ export default function GuardDevices() {
     e.preventDefault();
     try {
       setAdding(true);
+      const chosenHostel = hostels.find(h => h.id === selectedHostelId);
+      const chosenGate = guardType === "HOSTEL_GATE"
+        ? (chosenHostel ? `${chosenHostel.name} Gate` : "Hostel Gate")
+        : gate;
+
       const res = await apiFetch("/api/management/devices", {
         method: "POST",
         body: JSON.stringify({ 
           phone: phone.trim(),
           device_name: deviceName.trim(),
-          gate: gate.trim()
+          gate: chosenGate.trim(),
+          guard_type: guardType,
+          hostel_id: guardType === "HOSTEL_GATE" ? selectedHostelId : null
         }),
       });
       if (res.success && res.activation_code) {
         setCreatedCode({ code: res.activation_code, phone });
         setPhone("");
         setDeviceName("Main Gate Terminal");
+        setGuardType("MAIN_GATE");
         setGate("Main Gate");
         fetchDevices();
       }
@@ -239,10 +273,19 @@ export default function GuardDevices() {
                       <td className="px-4 py-3">
                         <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
                           <Laptop size={16} className="text-[#6d0f16] shrink-0" />
-                          {d.device_name || "Main Gate Terminal"}
+                          {d.device_name || "Guard Terminal"}
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5 font-medium">
-                          Gate: <span className="text-gray-700 font-semibold">{d.gate || "Main Gate"}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                            d.guard_type === "HOSTEL_GATE"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}>
+                            {d.guard_type === "HOSTEL_GATE" ? "Hostel Terminal" : "Main Gate"}
+                          </span>
+                          <span className="text-xs text-gray-600 font-medium truncate max-w-[180px]">
+                            {d.hostel_name || d.gate || "Main Gate"}
+                          </span>
                         </div>
                       </td>
 
@@ -444,23 +487,89 @@ export default function GuardDevices() {
                     value={deviceName}
                     onChange={e => setDeviceName(e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#6d0f16] transition"
-                    placeholder="e.g. Main Gate Tablet 1"
+                    placeholder="e.g. Dhauladhar Terminal or Main Gate Tablet"
                   />
                 </div>
 
+                {/* TERMINAL TYPE SELECTOR */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Assigned Gate Location</label>
-                  <select
-                    value={gate}
-                    onChange={e => setGate(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#6d0f16] transition"
-                  >
-                    <option value="Main Gate">Main Gate</option>
-                    <option value="North Gate">North Gate</option>
-                    <option value="South Gate">South Gate</option>
-                    <option value="Hostel Gate">Hostel Gate</option>
-                  </select>
+                  <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Terminal Category</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGuardType("MAIN_GATE");
+                        setDeviceName("Main Gate Terminal");
+                        setGate("Main Gate");
+                      }}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        guardType === "MAIN_GATE"
+                          ? "bg-[#6d0f16] text-white border-[#6d0f16] shadow-xs"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      🛡️ Campus Gate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGuardType("HOSTEL_GATE");
+                        const firstHostel = hostels[0];
+                        if (firstHostel) {
+                          setSelectedHostelId(firstHostel.id);
+                          setDeviceName(`${firstHostel.name} Terminal`);
+                        } else {
+                          setDeviceName("Hostel Guard Terminal");
+                        }
+                      }}
+                      className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        guardType === "HOSTEL_GATE"
+                          ? "bg-[#6d0f16] text-white border-[#6d0f16] shadow-xs"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      🏢 Hostel Gate
+                    </button>
+                  </div>
                 </div>
+
+                {/* CONDITIONAL HOSTEL / GATE DROPDOWN */}
+                {guardType === "HOSTEL_GATE" ? (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Assigned Hostel</label>
+                    <select
+                      value={selectedHostelId}
+                      onChange={e => {
+                        const id = e.target.value;
+                        setSelectedHostelId(id);
+                        const h = hostels.find(x => x.id === id);
+                        if (h) setDeviceName(`${h.name} Terminal`);
+                      }}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#6d0f16] transition"
+                    >
+                      {hostels.length === 0 ? (
+                        <option value="">No hostels available</option>
+                      ) : (
+                        hostels.map(h => (
+                          <option key={h.id} value={h.id}>{h.name}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Assigned Gate Location</label>
+                    <select
+                      value={gate}
+                      onChange={e => setGate(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:bg-white focus:border-[#6d0f16] transition"
+                    >
+                      <option value="Main Gate">Main Gate</option>
+                      <option value="North Gate">North Gate</option>
+                      <option value="South Gate">South Gate</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="pt-3 flex justify-end gap-2">
                   <button

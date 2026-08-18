@@ -31,7 +31,10 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
       
       const rawRole = data.user.role || data.user.status || "authority";
-      const normalizedRole = rawRole.toLowerCase().replace(/[\s_]+/g, "-");
+      let normalizedRole = rawRole.toLowerCase().replace(/[\s_]+/g, "-");
+      if (normalizedRole === "attendent") {
+        normalizedRole = "attendant";
+      }
       localStorage.setItem("role", normalizedRole);
 
       // Route based on status
@@ -39,7 +42,7 @@ export default function Login() {
         navigate("/chief-warden");
       } else if (normalizedRole === "warden") {
         navigate("/warden");
-      } else if (normalizedRole === "attendant" || normalizedRole === "attendent") {
+      } else if (normalizedRole === "attendant") {
         navigate("/attendant");
       } else {
         navigate("/");
