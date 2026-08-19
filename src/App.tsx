@@ -26,12 +26,27 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   return children;
 }
 
+// Redirect already logged-in authority users away from the login page
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const userStr = localStorage.getItem("user");
+  const role = localStorage.getItem("role")?.toLowerCase();
+
+  if (userStr && role) {
+    const normalized = role === "chief warden" ? "chief-warden" : role === "attendent" ? "attendant" : role;
+    if (["chief-warden", "warden", "attendant"].includes(normalized)) {
+      return <Navigate to={`/${normalized}`} replace />;
+    }
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         {/* LOGIN */}
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         
         {/* CHIEF WARDEN */}
         <Route path="/chief-warden" element={

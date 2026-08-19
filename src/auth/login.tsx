@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../utils/api";
 
@@ -8,6 +8,18 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Redirect already-logged-in authority users away from the login page
+  useEffect(() => {
+    const role = localStorage.getItem("role")?.toLowerCase();
+    const user = localStorage.getItem("user");
+    if (user && role) {
+      const normalized = role === "chief warden" ? "chief-warden" : role === "attendent" ? "attendant" : role;
+      if (["chief-warden", "warden", "attendant"].includes(normalized)) {
+        navigate(`/${normalized}`, { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +48,14 @@ export default function Login() {
         normalizedRole = "attendant";
       }
       localStorage.setItem("role", normalizedRole);
+
+      // Persist session info for silent token refresh on next visit
+      if (data.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
+      if (data.sessionId) {
+        localStorage.setItem("sessionId", data.sessionId);
+      }
 
       // Route based on status
       if (normalizedRole === "chief-warden") {
