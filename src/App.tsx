@@ -37,7 +37,7 @@ function useAuth() {
     }
 
     apiFetch("/api/authority/me", { method: "GET" })
-      .then((data) => {
+      .then((data: any) => {
         if (data?.success && data?.user) {
           const user = data.user;
           const role = normalizeRole(user.role || user.status || existingRole);
