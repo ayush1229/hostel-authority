@@ -37,25 +37,15 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (data.token || data.accessToken) {
-        localStorage.setItem("token", data.token || data.accessToken);
-      }
+      // Only store non-sensitive display data — tokens live in HttpOnly cookies set by the server
       localStorage.setItem("user", JSON.stringify(data.user));
-      
+
       const rawRole = data.user.role || data.user.status || "authority";
       let normalizedRole = rawRole.toLowerCase().replace(/[\s_]+/g, "-");
       if (normalizedRole === "attendent") {
         normalizedRole = "attendant";
       }
       localStorage.setItem("role", normalizedRole);
-
-      // Persist session info for silent token refresh on next visit
-      if (data.refreshToken) {
-        localStorage.setItem("refreshToken", data.refreshToken);
-      }
-      if (data.sessionId) {
-        localStorage.setItem("sessionId", data.sessionId);
-      }
 
       // Route based on status
       if (normalizedRole === "chief-warden") {
